@@ -1,5 +1,9 @@
 # Docker-BDE-BigDataPlatform
 
+**Tested OK using:**
+- Docker v14.12.0 on Windows 11
+- Docker v14.12.0 on Mac OS 
+
 Currently this repository provide following services:
 - namenode (Hadoop HDFS)
 - datanode (Hadoop HDFS)
