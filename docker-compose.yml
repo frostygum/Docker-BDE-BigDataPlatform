@@ -65,6 +65,9 @@ services:
   zoo:
     image: zookeeper:3.4.10
     container_name: zoo
+    volumes:
+      - zoo_data:/data
+      - zoo_log_data:/datalog
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888
@@ -104,6 +107,8 @@ services:
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
+    volumes:
+      - ./data:/data
     env_file:
       - ./hadoop-hive.env
     environment:
@@ -130,9 +135,24 @@ services:
     container_name: hive-metastore-postgresql
     restart: always
 
+  hive-metastore-postgresql-custom:
+    image: custom/hive-metastore-postgresql:latest
+    build:
+      context: ./builds/hive-posgres
+      dockerfile: Dockerfile
+    container_name: hive-metastore-postgresql
+    volumes: 
+      - posgre_db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    restart: always
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
   hadoop_historyserver:
   hbase_master_data:
   hbase_region_data:
+  posgre_db:
+  zoo_data:
+  zoo_log_data:
