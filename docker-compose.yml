@@ -87,6 +87,8 @@ services:
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888
     ports:
       - 2181:2181
+      - 3888:3888
+      - 2888:2888
     restart: always
 
   # hbase-master:
