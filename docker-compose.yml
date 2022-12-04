@@ -104,6 +104,52 @@ services:
       - 16030:16030
     restart: always
 
+  hbase-base-custom:
+    image: hbase-base
+    build:
+      context: ./builds/hbase/base
+      dockerfile: Dockerfile
+      args:
+        version: "2.2.4"
+    env_file:
+      - ./hbase-distributed-local.env
+
+  hbase-master-custom:
+    image: hbase-base/master
+    build:
+      context: ./builds/hbase/hmaster
+      dockerfile: Dockerfile
+    container_name: hbase-master
+    hostname: hbase-master
+    volumes:
+      - hbase_master_data:/hbase-data
+    env_file:
+      - ./hbase-distributed-local.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181"
+    ports:
+      - 16010:16010
+    restart: always
+
+  hbase-region-custom:
+    image: hbase-base/regionserver
+    build:
+      context: ./builds/hbase/hregionserver
+      dockerfile: Dockerfile
+    container_name: hbase-regionserver
+    hostname: hbase-regionserver
+    volumes:
+      - hbase_region_data:/hbase-data
+    env_file:
+      - ./hbase-distributed-local.env
+    environment:
+    environment:
+      HBASE_CONF_hbase_regionserver_hostname: hbase-region
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181 hbase-master:16010"
+    ports:
+      - 16030:16030
+    restart: always
+
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
@@ -141,7 +187,7 @@ services:
       context: ./builds/hive-posgres
       dockerfile: Dockerfile
     container_name: hive-metastore-postgresql
-    volumes: 
+    volumes:
       - posgre_db:/var/lib/postgresql/data
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
