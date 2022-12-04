@@ -4,6 +4,8 @@ services:
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
+    networks:
+      - data-center
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
       - ./data:/data
@@ -19,17 +21,23 @@ services:
   datanode:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode
+    networks:
+      - data-center
     volumes:
       - hadoop_datanode:/hadoop/dfs/data
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
     env_file:
       - ./hadoop.env
+    ports:
+      - 9864:9864
     restart: always
 
   resourcemanager:
     image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
     container_name: resourcemanager
+    networks:
+      - data-center
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
     env_file:
@@ -41,6 +49,8 @@ services:
   nodemanager:
     image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
     container_name: nodemanager
+    networks:
+      - data-center
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
     env_file:
@@ -52,6 +62,8 @@ services:
   historyserver:
     image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
     container_name: historyserver
+    networks:
+      - data-center
     volumes:
       - hadoop_historyserver:/hadoop/yarn/timeline
     environment:
@@ -65,6 +77,8 @@ services:
   zoo:
     image: zookeeper:3.4.10
     container_name: zoo
+    networks:
+      - data-center
     volumes:
       - zoo_data:/data
       - zoo_log_data:/datalog
@@ -75,34 +89,38 @@ services:
       - 2181:2181
     restart: always
 
-  hbase-master:
-    image: bde2020/hbase-master:1.0.0-hbase1.2.6
-    container_name: hbase-master
-    hostname: hbase-master
-    volumes:
-      - hbase_master_data:/hbase-data
-    env_file:
-      - ./hbase-distributed-local.env
-    environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181"
-    ports:
-      - 16010:16010
-    restart: always
+  # hbase-master:
+  #   image: bde2020/hbase-master:1.0.0-hbase1.2.6
+  #   container_name: hbase-master
+  #   networks:
+  #     - data-center
+  #   hostname: hbase-master
+  #   volumes:
+  #     - hbase_master_data:/hbase-data
+  #   env_file:
+  #     - ./hbase-distributed-local.env
+  #   environment:
+  #     SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181"
+  #   ports:
+  #     - 16010:16010
+  #   restart: always
 
-  hbase-region:
-    image: bde2020/hbase-regionserver:1.0.0-hbase1.2.6
-    container_name: hbase-regionserver
-    hostname: hbase-regionserver
-    volumes:
-      - hbase_region_data:/hbase-data
-    env_file:
-      - ./hbase-distributed-local.env
-    environment:
-      HBASE_CONF_hbase_regionserver_hostname: hbase-region
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181 hbase-master:16010"
-    ports:
-      - 16030:16030
-    restart: always
+  # hbase-region:
+  #   image: bde2020/hbase-regionserver:1.0.0-hbase1.2.6
+  #   container_name: hbase-regionserver
+  #   networks:
+  #     - data-center
+  #   hostname: hbase-regionserver
+  #   volumes:
+  #     - hbase_region_data:/hbase-data
+  #   env_file:
+  #     - ./hbase-distributed-local.env
+  #   environment:
+  #     HBASE_CONF_hbase_regionserver_hostname: hbase-region
+  #     SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181 hbase-master:16010"
+  #   ports:
+  #     - 16030:16030
+  #   restart: always
 
   hbase-base-custom:
     image: hbase-base
@@ -114,12 +132,14 @@ services:
     env_file:
       - ./hbase-distributed-local.env
 
-  hbase-master-custom:
+  hbase-master:
     image: hbase-base/master
     build:
       context: ./builds/hbase/hmaster
       dockerfile: Dockerfile
     container_name: hbase-master
+    networks:
+      - data-center
     hostname: hbase-master
     volumes:
       - hbase_master_data:/hbase-data
@@ -128,16 +148,19 @@ services:
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181"
     ports:
+      - 16000:16000
       - 16010:16010
     restart: always
 
-  hbase-region-custom:
+  hbase-region:
     image: hbase-base/regionserver
     build:
       context: ./builds/hbase/hregionserver
       dockerfile: Dockerfile
-    container_name: hbase-regionserver
-    hostname: hbase-regionserver
+    container_name: hbase-region
+    networks:
+      - data-center
+    hostname: hbase-region
     volumes:
       - hbase_region_data:/hbase-data
     env_file:
@@ -148,11 +171,14 @@ services:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 zoo:2181 hbase-master:16010"
     ports:
       - 16030:16030
+      - 16020:16020
     restart: always
 
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
+    networks:
+      - data-center
     volumes:
       - ./data:/data
     env_file:
@@ -167,6 +193,8 @@ services:
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-metastore
+    networks:
+      - data-center
     env_file:
       - ./hadoop-hive.env
     command: /opt/hive/bin/hive --service metastore
@@ -179,6 +207,8 @@ services:
   hive-metastore-postgresql:
     image: bde2020/hive-metastore-postgresql:2.3.0
     container_name: hive-metastore-postgresql
+    networks:
+      - data-center
     restart: always
 
   hive-metastore-postgresql-custom:
@@ -187,6 +217,8 @@ services:
       context: ./builds/hive-posgres
       dockerfile: Dockerfile
     container_name: hive-metastore-postgresql
+    networks:
+      - data-center
     volumes:
       - posgre_db:/var/lib/postgresql/data
     environment:
@@ -202,3 +234,6 @@ volumes:
   posgre_db:
   zoo_data:
   zoo_log_data:
+
+networks:
+  data-center:
